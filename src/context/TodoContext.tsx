@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../utils/supabase';
 import { Todo, TodoContextType } from '../types/todo.types';
 import { useAuth } from './AuthContext';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined);
 
@@ -9,12 +10,49 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const [subscription, setSubscription] = useState<RealtimeChannel | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchTodos();
+      setupRealtimeSubscription();
     }
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, [user]);
+
+  const setupRealtimeSubscription = () => {
+    if (!user) return;
+
+    const newSubscription = supabase
+      .channel('todos_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'todos',
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newTodo = payload.new as Todo;
+          setTodos((prev) => [newTodo, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          const updatedTodo = payload.new as Todo;
+          setTodos((prev) =>
+            prev.map((todo) => (todo.id === updatedTodo.id ? updatedTodo : todo))
+          );
+        } else if (payload.eventType === 'DELETE') {
+          const deletedTodo = payload.old as Todo;
+          setTodos((prev) => prev.filter((todo) => todo.id !== deletedTodo.id));
+        }
+      })
+      .subscribe();
+
+    setSubscription(newSubscription);
+  };
 
   const fetchTodos = async () => {
     try {
@@ -42,10 +80,8 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         completed: false,
       };
 
-      const { data, error } = await supabase.from('todos').insert([newTodo]).select();
-
+      const { error } = await supabase.from('todos').insert(newTodo);
       if (error) throw error;
-      if (data) setTodos((prev) => [data[0], ...prev]);
     } catch (error) {
       console.error('Error adding todo:', error);
     }
@@ -60,9 +96,6 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', user?.id);
 
       if (error) throw error;
-      setTodos((prev) =>
-        prev.map((todo) => (todo.id === id ? { ...todo, completed } : todo))
-      );
     } catch (error) {
       console.error('Error toggling todo:', error);
     }
@@ -77,7 +110,6 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', user?.id);
 
       if (error) throw error;
-      setTodos((prev) => prev.filter((todo) => todo.id !== id));
     } catch (error) {
       console.error('Error deleting todo:', error);
     }
@@ -92,9 +124,6 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', user?.id);
 
       if (error) throw error;
-      setTodos((prev) =>
-        prev.map((todo) => (todo.id === id ? { ...todo, title } : todo))
-      );
     } catch (error) {
       console.error('Error updating todo:', error);
     }
