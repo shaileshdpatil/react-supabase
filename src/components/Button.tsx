@@ -17,7 +17,7 @@ const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   fullWidth = false,
 }) => {
-  const baseStyles = "flex justify-center items-center px-5 py-2.5 border rounded-md font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1";
+  const baseStyles = "flex cursor-pointer justify-center items-center px-5 py-2.5 border rounded-md font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1";
   
   const variantStyles = {
     primary: "bg-gray-800 hover:bg-gray-900 border-transparent text-white focus:ring-gray-500",
