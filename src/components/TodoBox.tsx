@@ -27,9 +27,9 @@ const TodoBox: React.FC<TodoBoxProps> = ({ todo }) => {
     }
   };
 
-  const handleUpdate = async (title: string) => {
+  const handleUpdate = async (title: string, description: string) => {
     try {
-      await updateTodo(todo.id, title);
+      await updateTodo(todo.id, title, description);
     } catch (error) {
       console.error('Failed to update todo:', error);
     }
@@ -116,6 +116,12 @@ const TodoBox: React.FC<TodoBoxProps> = ({ todo }) => {
               </button>
             </div>
           </div>
+
+          {todo.description && (
+            <p className="text-gray-600 mb-4 line-clamp-3">
+              {todo.description}
+            </p>
+          )}
 
           {/* Footer Section */}
           <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">

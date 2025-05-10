@@ -4,7 +4,7 @@ import { Todo } from '../types/todo.types';
 interface TodoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (title: string, file?: File) => Promise<void>;
+  onSubmit: (title: string, description: string, file?: File) => Promise<void>;
   initialData?: Todo;
   mode: 'add' | 'edit';
 }
@@ -17,14 +17,17 @@ const TodoModal: React.FC<TodoModalProps> = ({
   mode
 }) => {
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (initialData && mode === 'edit') {
       setTitle(initialData.title);
+      setDescription(initialData.description || '');
     } else {
       setTitle('');
+      setDescription('');
     }
     setFile(null);
   }, [initialData, mode, isOpen]);
@@ -35,7 +38,7 @@ const TodoModal: React.FC<TodoModalProps> = ({
 
     try {
       setIsSubmitting(true);
-      await onSubmit(title, file || undefined);
+      await onSubmit(title, description, file || undefined);
       onClose();
     } catch (error) {
       console.error('Failed to submit todo:', error);
@@ -47,8 +50,9 @@ const TodoModal: React.FC<TodoModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center min-h-screen px-4">
+      <div className="fixed inset-0 bg-black opacity-40 z-40" onClick={onClose}></div>
+      <div className="bg-white rounded-lg p-6 w-full max-w-md z-50 relative">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">
             {mode === 'add' ? 'Add New Todo' : 'Edit Todo'}
@@ -88,7 +92,24 @@ const TodoModal: React.FC<TodoModalProps> = ({
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter todo title"
+              required
               autoFocus
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Description
+            </label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-y"
+              placeholder="Enter todo description"
             />
           </div>
 

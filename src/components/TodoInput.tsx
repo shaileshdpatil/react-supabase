@@ -6,6 +6,10 @@ const TodoInput: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { addTodo } = useTodo();
 
+  const handleSubmit = async (title: string, description: string, file?: File) => {
+    await addTodo(title, description, file);
+  };
+
   return (
     <>
       <div className="mb-6">
@@ -20,7 +24,7 @@ const TodoInput: React.FC = () => {
       <TodoModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSubmit={addTodo}
+        onSubmit={handleSubmit}
         mode="add"
       />
     </>

@@ -103,7 +103,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addTodo = async (title: string, file?: File) => {
+  const addTodo = async (title: string, description: string, file?: File) => {
     try {
       let attachment;
       if (file) {
@@ -115,6 +115,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const newTodo = {
         title,
+        description,
         user_id: user?.id,
         completed: false,
         attachment
@@ -182,11 +183,11 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateTodo = async (id: string, title: string) => {
+  const updateTodo = async (id: string, title: string, description: string) => {
     try {
       const { error } = await supabase
         .from('todos')
-        .update({ title })
+        .update({ title, description })
         .eq('id', id)
         .eq('user_id', user?.id);
 
