@@ -4,6 +4,12 @@ import { AuthContextType, User } from '../types/auth.types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+interface FormValues {
+  fullName: string;
+  email: string;
+  password: string;
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,13 +28,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (values:FormValues) => {
     const { error } = await supabase.auth.signUp({
-      email,
-      password,
+      email:values.email,
+      password:values.password,
       options: {
         data: {
-          full_name: fullName || '',
+          full_name: values.fullName || '',
         },
         emailRedirectTo: `${window.location.origin}/login`,
       },

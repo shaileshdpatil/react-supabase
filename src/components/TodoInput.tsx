@@ -1,34 +1,29 @@
 import React, { useState } from 'react';
 import { useTodo } from '../context/TodoContext';
-import Button from './Button';
+import TodoModal from './TodoModal';
 
 const TodoInput: React.FC = () => {
-  const [title, setTitle] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { addTodo } = useTodo();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (title.trim()) {
-      await addTodo(title);
-      setTitle('');
-    }
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="mb-6">
-      <div className="flex shadow-md rounded-lg overflow-hidden">
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Add a new task..."
-          className="flex-1 p-3 focus:outline-none bg-white"
-        />
-        <Button type="submit" disabled={!title.trim()}>
-          Add Task
-        </Button>
+    <>
+      <div className="mb-6">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          Add New Task
+        </button>
       </div>
-    </form>
+
+      <TodoModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={addTodo}
+        mode="add"
+      />
+    </>
   );
 };
 

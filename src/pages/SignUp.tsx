@@ -1,20 +1,34 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { useRedirectIfAuthenticated } from '../utils/useRedirectIfAuthenticated';
 import AuthCard from '../components/AuthCard';
 import FormInput from '../components/FormInput';
 import Button from '../components/Button';
 
+interface FormValues {
+  fullName: string;
+  email: string;
+  password: string;
+}
+
 const SignUp: React.FC = () => {
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
-  const { loading: authLoading } = useRedirectIfAuthenticated();
+
+  const [formValues, setFormValues] = useState<FormValues>({
+    fullName: '',
+    email: '',
+    password: ''
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormValues(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +37,7 @@ const SignUp: React.FC = () => {
     setLoading(true);
 
     try {
-      await signUp(email, password, fullName);
+      await signUp(formValues);
       navigate('/dashboard');
     } catch (err) {
       setError((err as Error).message);
@@ -31,14 +45,6 @@ const SignUp: React.FC = () => {
       setLoading(false);
     }
   };
-  
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-800"></div>
-      </div>
-    );
-  }
 
   return (
     <AuthCard 
@@ -48,25 +54,25 @@ const SignUp: React.FC = () => {
     >
       <form className="space-y-6" onSubmit={handleSubmit}>
         <FormInput
-          id="full-name"
-          name="full-name"
+          id="fullName"
+          name="fullName"
           type="text"
           autoComplete="name"
           required={true}
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          value={formValues.fullName}
+          onChange={handleChange}
           placeholder="Enter your full name"
           label="Full Name"
         />
         
         <FormInput
-          id="email-address"
+          id="email"
           name="email"
           type="email"
           autoComplete="email"
           required={true}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={formValues.email}
+          onChange={handleChange}
           placeholder="Enter your email"
           label="Email address"
         />
@@ -77,8 +83,8 @@ const SignUp: React.FC = () => {
           type="password"
           autoComplete="new-password"
           required={true}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={formValues.password}
+          onChange={handleChange}
           placeholder="Create a password"
           label="Password"
         />

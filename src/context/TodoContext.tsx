@@ -6,16 +6,21 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined);
 
+const STORAGE_BUCKET = 'files';
+
 export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const [subscription, setSubscription] = useState<RealtimeChannel | null>(null);
 
+  useEffect(()=>{
+    setupRealtimeSubscription();
+  },[])
+
   useEffect(() => {
     if (user) {
       fetchTodos();
-      setupRealtimeSubscription();
     }
 
     return () => {
@@ -23,7 +28,7 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subscription.unsubscribe();
       }
     };
-  }, [user]);
+  }, [user?.id]);
 
   const setupRealtimeSubscription = () => {
     if (!user) return;
@@ -34,7 +39,6 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         event: '*',
         schema: 'public',
         table: 'todos',
-        filter: `user_id=eq.${user.id}`,
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newTodo = payload.new as Todo;
@@ -72,12 +76,48 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addTodo = async (title: string) => {
+  const uploadFile = async (file: File) => {
     try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${user?.id}/${fileName}`;
+
+      const { error: uploadError} = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from(STORAGE_BUCKET)
+        .getPublicUrl(filePath);
+
+      return {
+        path: filePath,
+        url: publicUrl,
+        name: file.name
+      };
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      return null;
+    }
+  };
+
+  const addTodo = async (title: string, file?: File) => {
+    try {
+      let attachment;
+      if (file) {
+        const uploadResult = await uploadFile(file);
+        if (uploadResult) {
+          attachment = uploadResult;
+        }
+      }
+
       const newTodo = {
         title,
         user_id: user?.id,
         completed: false,
+        attachment
       };
 
       const { error } = await supabase.from('todos').insert(newTodo);
@@ -103,15 +143,42 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteTodo = async (id: string) => {
     try {
-      const { error } = await supabase
+      // First fetch the todo to get attachment info
+      const { data: todoToDelete, error: fetchError } = await supabase
+        .from('todos')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) {
+        throw new Error('Failed to fetch todo for deletion');
+      }
+
+      // If todo has an attachment, delete it first
+      if (todoToDelete?.attachment?.path) {
+        const { error: storageError } = await supabase.storage
+          .from(STORAGE_BUCKET)
+          .remove([todoToDelete.attachment.path]);
+
+        if (storageError) {
+          throw new Error('Failed to delete attached file');
+        }
+      }
+
+      // After successful file deletion (if any), delete the todo
+      const { error: deleteError } = await supabase
         .from('todos')
         .delete()
         .eq('id', id)
         .eq('user_id', user?.id);
 
-      if (error) throw error;
+      if (deleteError) {
+        throw new Error('Failed to delete todo');
+      }
+
     } catch (error) {
-      console.error('Error deleting todo:', error);
+      console.error('Error in delete operation:', error);
+      throw error; // Re-throw to handle in the UI layer
     }
   };
 

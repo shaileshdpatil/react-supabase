@@ -45,7 +45,7 @@ const Login: React.FC = () => {
       await signIn(email, password);
       navigate('/dashboard');
     } catch (err) {
-      console.log(err);
+      alert((err as Error).message)
     } finally {
       setLoading(false);
     }
